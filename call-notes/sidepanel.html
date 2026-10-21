@@ -1,0 +1,185 @@
+<!doctype html>
+<!--
+  Call Notes: side panel UI.
+  Layout is a single column: header (call + timer), tab bar, then one tab panel.
+  All behaviour lives in sidepanel.js; no inline scripts or styles (blocked by the CSP).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Call Notes</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <!-- ========== Header: current call, timer, text size ========== -->
+  <header class="topbar">
+    <div class="topbar-row">
+      <div class="call-context">
+        <span id="site-badge" class="site-badge">…</span>
+        <span id="call-label" class="call-label">Loading…</span>
+        <button id="name-call-btn" class="link-btn" type="button">Name</button>
+      </div>
+      <div class="text-size" role="group" aria-label="Text size">
+        <button id="text-smaller" class="icon-btn" type="button" title="Smaller text" aria-label="Smaller text">A−</button>
+        <button id="text-larger" class="icon-btn" type="button" title="Larger text" aria-label="Larger text">A+</button>
+      </div>
+    </div>
+
+    <form id="name-call-form" class="inline-form" hidden>
+      <label class="sr-only" for="name-call-input">Call name</label>
+      <input id="name-call-input" type="text" maxlength="80" placeholder="e.g. INA interview" autocomplete="off">
+      <button type="submit" class="btn primary">Save</button>
+      <button type="button" id="name-call-cancel" class="btn">Cancel</button>
+    </form>
+
+    <div class="timer-row">
+      <span id="timer-display" class="timer-display" role="timer" aria-live="off">00:00</span>
+      <button id="timer-toggle" class="btn" type="button">Pause</button>
+      <button id="timer-reset" class="btn" type="button">Reset</button>
+    </div>
+
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" type="button" id="tabbtn-notes" data-tab="notes" aria-controls="tab-notes" aria-selected="true">Notes</button>
+      <button class="tab" role="tab" type="button" id="tabbtn-prep" data-tab="prep" aria-controls="tab-prep" aria-selected="false">Prep</button>
+      <button class="tab" role="tab" type="button" id="tabbtn-ask" data-tab="ask" aria-controls="tab-ask" aria-selected="false">Ask</button>
+      <button class="tab" role="tab" type="button" id="tabbtn-history" data-tab="history" aria-controls="tab-history" aria-selected="false">History</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ========== Notes tab ========== -->
+    <section id="tab-notes" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-notes">
+      <div id="viewing-banner" class="banner" hidden>
+        <span id="viewing-text">Viewing a past note</span>
+        <button id="viewing-back" class="btn" type="button">Back to current</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="segmented" role="group" aria-label="Which notes">
+          <button id="scope-call" type="button" data-scope="call" aria-pressed="false">This call</button>
+          <button id="scope-general" type="button" data-scope="general" aria-pressed="false">General</button>
+        </div>
+        <div class="segmented" role="group" aria-label="Editor mode">
+          <button id="mode-edit" type="button" data-mode="edit" aria-pressed="true">Edit</button>
+          <button id="mode-preview" type="button" data-mode="preview" aria-pressed="false">Preview</button>
+        </div>
+      </div>
+
+      <label class="sr-only" for="note-editor">Notes</label>
+      <textarea id="note-editor" class="editor" spellcheck="true" disabled
+        placeholder="Type your notes…&#10;&#10;Markdown works: # heading, **bold**, *italic*, - bullet, 1. numbered, - [ ] task, `code`"></textarea>
+      <div id="note-preview" class="markdown preview" hidden></div>
+
+      <div class="toolbar footer">
+        <span id="save-status" class="muted" aria-live="polite"></span>
+        <div class="btn-group">
+          <button id="note-copy" class="btn" type="button" title="Copy as Markdown">Copy</button>
+          <button id="note-md" class="btn" type="button" title="Download as Markdown">.md</button>
+          <button id="note-txt" class="btn" type="button" title="Download as plain text">.txt</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Prep tab ========== -->
+    <section id="tab-prep" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-prep" hidden>
+      <div class="field">
+        <div class="field-head">
+          <label for="prep-set-select">Prep set for this call</label>
+          <span class="field-actions">
+            <button id="set-new" class="link-btn" type="button">New</button>
+            <button id="set-rename" class="link-btn" type="button">Rename</button>
+            <button id="set-delete" class="link-btn danger" type="button">Delete</button>
+          </span>
+        </div>
+        <select id="prep-set-select" class="set-select"></select>
+      </div>
+      <form id="set-name-form" class="inline-form" hidden>
+        <label class="sr-only" for="set-name-input">Set name</label>
+        <input id="set-name-input" type="text" maxlength="60" placeholder="e.g. Properstar call" autocomplete="off">
+        <button type="submit" class="btn primary">Save</button>
+        <button type="button" id="set-name-cancel" class="btn">Cancel</button>
+      </form>
+
+      <div class="toolbar">
+        <label class="sr-only" for="card-filter">Filter cards</label>
+        <input id="card-filter" type="search" placeholder="Filter cards…" autocomplete="off">
+        <div class="btn-group">
+          <button id="cards-expand" class="link-btn" type="button">Expand all</button>
+          <button id="cards-collapse" class="link-btn" type="button">Collapse all</button>
+        </div>
+        <label class="check">
+          <input id="one-at-a-time" type="checkbox">
+          One at a time
+        </label>
+      </div>
+
+      <ul id="card-list" class="card-list"></ul>
+      <p id="cards-empty" class="empty" hidden>No cards in this set yet. Add one below, or paste a batch.</p>
+
+      <details class="panel" id="add-card-panel">
+        <summary>Add a card</summary>
+        <form id="card-form" class="stack">
+          <label for="card-q">Question or topic</label>
+          <input id="card-q" type="text" required autocomplete="off" placeholder="e.g. Why do you want this role?">
+          <label for="card-a">Answer or talking points (Markdown ok)</label>
+          <textarea id="card-a" rows="5" placeholder="- Point one&#10;- Point two"></textarea>
+          <div class="btn-group">
+            <button type="submit" class="btn primary">Add card</button>
+          </div>
+        </form>
+      </details>
+
+      <details class="panel" id="bulk-panel">
+        <summary>Paste many cards</summary>
+        <form id="bulk-form" class="stack">
+          <p class="muted small">
+            Use <code>Q:</code> / <code>A:</code> lines, or <code>## Question</code> headings with the answer below,
+            or blocks separated by a blank line (first line = question).
+          </p>
+          <label class="sr-only" for="bulk-text">Cards to import</label>
+          <textarea id="bulk-text" rows="8" placeholder="Q: Tell me about yourself&#10;A: 3 roles, 8 years, focus on…&#10;&#10;Q: Biggest achievement?&#10;A: Shipped…"></textarea>
+          <div class="btn-group">
+            <button type="submit" class="btn primary">Import cards</button>
+          </div>
+        </form>
+      </details>
+    </section>
+
+    <!-- ========== Ask tab (questions to ask them) ========== -->
+    <section id="tab-ask" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-ask" hidden>
+      <div class="field">
+        <label for="ask-set-select">Questions to ask them, from set</label>
+        <select id="ask-set-select" class="set-select"></select>
+      </div>
+      <p id="ask-progress" class="progress"></p>
+      <ul id="ask-list" class="ask-list"></ul>
+      <p id="ask-empty" class="empty" hidden>No questions yet. Add the things you want to ask them.</p>
+      <form id="ask-form" class="inline-form">
+        <label class="sr-only" for="ask-input">New question</label>
+        <input id="ask-input" type="text" maxlength="300" placeholder="Add a question to ask…" autocomplete="off">
+        <button type="submit" class="btn primary">Add</button>
+      </form>
+      <div class="toolbar">
+        <span id="ask-scope" class="muted small"></span>
+        <button id="ask-reset" class="btn" type="button">Untick all</button>
+      </div>
+    </section>
+
+    <!-- ========== History tab ========== -->
+    <section id="tab-history" class="tab-panel" role="tabpanel" aria-labelledby="tabbtn-history" hidden>
+      <div class="toolbar">
+        <label class="sr-only" for="history-filter">Search notes</label>
+        <input id="history-filter" type="search" placeholder="Search past notes…" autocomplete="off">
+      </div>
+      <ul id="history-list" class="history-list"></ul>
+      <p id="history-empty" class="empty" hidden>No saved call notes yet.</p>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
