@@ -41,6 +41,8 @@ const SETTINGS_KEY = 'settings';
 const AUTOSAVE_INTERVAL_MS = 3000; // save at least this often while typing
 const AUTOSAVE_DEBOUNCE_MS = 1000; // ...and this long after you stop typing
 
+const TEAMS_HOSTS = ['teams.microsoft.com', 'teams.live.com', 'teams.cloud.microsoft'];
+
 const TEXT_SIZES = ['s', 'm', 'l', 'xl'];
 
 const DEFAULT_SETTINGS = {
@@ -182,6 +184,7 @@ function safeDecode(text) {
  * Teams links:  .../l/meetup-join/19:meeting_XXXX@thread.v2/0?context=...
  *               https://teams.microsoft.com/meet/1234567890123?p=...
  *               https://teams.live.com/meet/9876543210987?p=...
+ *               (the same formats on teams.cloud.microsoft)
  */
 function parseCallUrl(url) {
   let parsed;
@@ -196,7 +199,7 @@ function parseCallUrl(url) {
     return { site: 'meet', code: match ? match[1].toLowerCase() : null };
   }
 
-  if (parsed.hostname === 'teams.microsoft.com' || parsed.hostname === 'teams.live.com') {
+  if (TEAMS_HOSTS.includes(parsed.hostname)) {
     const full = safeDecode(parsed.href);
     let match = full.match(/19:meeting_([A-Za-z0-9_-]+)@thread\.v2/i);
     if (match) return { site: 'teams', code: `meeting_${match[1]}` };

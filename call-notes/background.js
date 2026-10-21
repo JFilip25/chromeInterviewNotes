@@ -14,7 +14,12 @@
 'use strict';
 
 /** Hostnames where the side panel is available. Must match host_permissions. */
-const SUPPORTED_HOSTS = ['meet.google.com', 'teams.microsoft.com', 'teams.live.com'];
+const SUPPORTED_HOSTS = [
+  'meet.google.com',
+  'teams.microsoft.com',
+  'teams.live.com',
+  'teams.cloud.microsoft', // Microsoft's newer Teams web domain
+];
 
 const PANEL_PATH = 'sidepanel.html';
 

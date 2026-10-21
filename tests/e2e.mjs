@@ -23,6 +23,7 @@ const MEET_A = 'https://meet.google.com/abc-defg-hij';
 const MEET_B = 'https://meet.google.com/xyz-abcd-efg';
 const TEAMS = 'https://teams.microsoft.com/l/meetup-join/19%3ameeting_NjE4ZTk2YmQtZGVm%40thread.v2/0?context=%7b%22Tid%22%3a%22t%22%7d';
 const TEAMS_LIVE = 'https://teams.live.com/meet/9381234567890?p=abc';
+const TEAMS_CLOUD = 'https://teams.cloud.microsoft/l/meetup-join/19%3ameeting_Y2xvdWRtZWV0aW5n%40thread.v2/0?context=%7b%7d';
 const OTHER = 'https://example.com/';
 
 let passed = 0;
@@ -34,7 +35,7 @@ async function launch() {
     channel: 'chromium', headless: true,
     args: [`--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`, `--remote-debugging-port=${PORT}`],
   });
-  await ctx.route(/https:\/\/(meet\.google\.com|teams\.microsoft\.com|teams\.live\.com|example\.com)\/.*/,
+  await ctx.route(/https:\/\/(meet\.google\.com|teams\.microsoft\.com|teams\.live\.com|teams\.cloud\.microsoft|example\.com)\/.*/,
     (r) => r.fulfill({ contentType: 'text/html', body: '<title>fake call page</title><h1>call</h1>' }));
   let [sw] = ctx.serviceWorkers();
   if (!sw) sw = await ctx.waitForEvent('serviceworker');
@@ -117,6 +118,8 @@ const teamsTab = await env.ctx.newPage();
 await teamsTab.goto(TEAMS);
 const liveTab = await env.ctx.newPage();
 await liveTab.goto(TEAMS_LIVE);
+const cloudTab = await env.ctx.newPage();
+await cloudTab.goto(TEAMS_CLOUD);
 await sleep(300);
 
 // Side panel enablement per site
@@ -134,6 +137,7 @@ const opts = await env.sw.evaluate(async () => {
 assert.deepEqual(opts[MEET_A], { panel: true, action: true }); ok('panel + icon enabled on meet.google.com');
 assert.deepEqual(opts[TEAMS], { panel: true, action: true }); ok('panel + icon enabled on teams.microsoft.com');
 assert.deepEqual(opts[TEAMS_LIVE], { panel: true, action: true }); ok('panel + icon enabled on teams.live.com');
+assert.deepEqual(opts[TEAMS_CLOUD], { panel: true, action: true }); ok('panel + icon enabled on teams.cloud.microsoft');
 assert.deepEqual(opts[OTHER], { panel: false, action: false }); ok('panel + icon disabled on other sites');
 assert.equal(opts.behavior.openPanelOnActionClick, true); ok('clicking the icon opens the panel (setPanelBehavior)');
 
@@ -322,12 +326,14 @@ const parsed = await panel.evaluate(() => [
   parseCallUrl('https://teams.microsoft.com/v2/?meetingjoin=true#/l/meetup-join/19:meeting_ZmQ5@thread.v2/0?context=x'),
   parseCallUrl('https://teams.microsoft.com/meet/2345678901234?p=x'),
   parseCallUrl('https://teams.microsoft.com/v2/'),
+  parseCallUrl('https://teams.cloud.microsoft/meet/3456789012345?p=y'),
 ]);
 assert.deepEqual(parsed, [
   { site: 'meet', code: 'abc-defg-hij' },
   { site: 'teams', code: 'meeting_ZmQ5' },
   { site: 'teams', code: '2345678901234' },
   { site: 'teams', code: null },
+  { site: 'teams', code: '3456789012345' },
 ]);
 ok('meeting code parsing for Meet and Teams URL formats');
 
@@ -352,6 +358,17 @@ ok('Teams URL without a meeting id keeps the current call notes');
 const livePanel = await openPanel(env, liveTab, TEAMS_LIVE);
 assert.equal(await livePanel.textContent('#call-label'), '9381234567890');
 ok('panel opens on teams.live.com and reads the meeting id');
+
+const cloudPanel = await openPanel(env, cloudTab, TEAMS_CLOUD);
+assert.equal(await cloudPanel.textContent('#site-badge'), 'Teams');
+assert.equal(await cloudPanel.getAttribute('#call-label', 'title'), 'meeting_Y2xvdWRtZWV0aW5n');
+await cloudPanel.click('#tabbtn-notes');
+assert.equal(await cloudPanel.inputValue('#note-editor'), '');
+await cloudPanel.fill('#note-editor', 'Cloud Teams notes');
+await waitSaved(cloudPanel);
+st = await storage(env.sw);
+assert.equal(st['note:teams:meeting_Y2xvdWRtZWV0aW5n'].content, 'Cloud Teams notes');
+ok('panel opens on teams.cloud.microsoft with its own notes');
 
 // Teams page with no meeting id: name the call to get separate notes
 const bareTab = await env.ctx.newPage();
@@ -391,7 +408,7 @@ if (SHOTS) {
 }
 
 // Privacy: panel pages made no network requests
-for (const p of [panel, teamsPanel, livePanel, barePanel]) {
+for (const p of [panel, teamsPanel, livePanel, cloudPanel, barePanel]) {
   const external = p.__requests.filter((u) => !u.startsWith('chrome-extension://') && !u.startsWith('blob:'));
   assert.deepEqual(external, []);
   assert.deepEqual(p.__errors, []);

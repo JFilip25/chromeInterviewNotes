@@ -28,7 +28,8 @@ chrome://extensions.
 
 ## Open the panel
 
-On a `meet.google.com`, `teams.microsoft.com` or `teams.live.com` tab:
+On a `meet.google.com`, `teams.microsoft.com`, `teams.cloud.microsoft` or
+`teams.live.com` tab:
 
 - click the **Call Notes** icon in the toolbar, or
 - press **Alt+N** (Option+N on a Mac).
@@ -131,7 +132,7 @@ clears the ticks for this call.
 | `sidePanel` | to show the panel |
 | `storage` | to save notes and prep cards in `chrome.storage.local` |
 | `tabs` | to read the current tab's URL (meeting code) |
-| host access to `meet.google.com`, `teams.microsoft.com`, `teams.live.com` | to turn the panel on only for those sites |
+| host access to `meet.google.com`, `teams.microsoft.com`, `teams.cloud.microsoft`, `teams.live.com` | to turn the panel on only for those sites |
 
 - **No network requests.** The extension's Content Security Policy sets
   `connect-src 'none'`, and Markdown images are shown as text and never loaded.
@@ -168,7 +169,7 @@ An automated end-to-end test (`tests/e2e.mjs`, in the repository root) loads the
 extension into real Chromium with Playwright. It serves fake Meet/Teams pages
 locally, opens the actual side panel, and checks the following:
 
-- the panel is enabled on meet.google.com, teams.microsoft.com and teams.live.com, and disabled elsewhere
+- the panel is enabled on meet.google.com, teams.microsoft.com, teams.cloud.microsoft and teams.live.com, and disabled elsewhere
 - notes autosave, and different meetings (and General) keep separate notes
 - prep sets, cards, the checklist, history, export and delete work
 - the panel makes no network requests and logs no console errors
@@ -179,8 +180,3 @@ npm install
 npx playwright install chromium
 npm test
 ```
-
-Note: Microsoft is moving web Teams to `teams.cloud.microsoft`. If your Teams
-opens there, add `https://teams.cloud.microsoft/*` to `host_permissions` in
-`manifest.json` and `teams.cloud.microsoft` to `SUPPORTED_HOSTS` in
-`background.js` and `parseCallUrl()` in `sidepanel.js`.
